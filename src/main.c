@@ -12,5 +12,14 @@ int main(int argc, char *argv[]) {
 
     printf("Input: %s\n",input_path);
 
+    PE_File file = {0};
+    if (pe_read_file(input_path,&file) != EXIT_SUCCESS){
+        return EXIT_FAILURE;
+    }
+
+    printf("Size: %zu bytes\n",file.size);
+
+    pe_free_file(&file);
+
     return EXIT_SUCCESS;
 }

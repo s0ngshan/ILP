@@ -1,4 +1,5 @@
-*.exe
 开发文档.md
+函数文档.md
+*.exe
 _test/
 _exe/
