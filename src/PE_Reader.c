@@ -141,7 +141,7 @@ int pe_print_info(const PE_File *file){
     
     // 确认可选头
     if (optional_header_offset > file->size ||
-        optional_header_size > file-size - optional_header_offset){
+        optional_header_size > file->size - optional_header_offset){
         fprintf(stderr,"Optional header outside file\n");
         return EXIT_FAILURE;
     }
@@ -167,6 +167,47 @@ int pe_print_info(const PE_File *file){
     printf("SectionAlignment:0x%lx\n",(unsigned long)optional_header.SectionAlignment);      // 节的对齐粒度
     printf("FileAlignment:0x%lx\n",(unsigned long)optional_header.FileAlignment);            // 文件的对齐粒度
     printf("SizeOfImage:0x%lx\n",(unsigned long)optional_header.SizeOfImage);             
+
+    // 读取验证节表，为后续压缩做准备
+    size_t section_table_offset = optional_header_offset + optional_header_size;
+    size_t section_count = (size_t)file_header.NumberOfSections;
+
+    if (section_count == 0){
+        fprintf(stderr,"No sections found\n");
+        return EXIT_FAILURE;
+    }
+
+    if (section_table_offset > file->size ||
+        section_count > (file->size - section_table_offset) / sizeof(IMAGE_SECTION_HEADER)){
+        fprintf(stderr,"Section table outside file\n");
+        return EXIT_FAILURE;
+    }
+
+    // 遍历节表，复制并打印节头
+    for (size_t i = 0;i < section_count;i++){
+        IMAGE_SECTION_HEADER section;
+        
+        size_t offset = section_table_offset + i * sizeof(section);
+        memcpy(&section,file->data + offset,sizeof(section));
+
+        printf("\nSection %zu:%.8s\n",i + 1,(const char *)section.Name);
+        printf("VirtualAddress:0x%lx\n",(unsigned long)section.VirtualAddress);
+        printf("VirtualSize:0x%lx\n",(unsigned long)section.Misc.VirtualSize);
+        printf("PointerToRawData:0x%lx\n",(unsigned long)section.PointerToRawData);
+        printf("SizeOfRawData:0x%lx\n",(unsigned long)section.SizeOfRawData);
+        printf("Characteristics:0x%lx\n",(unsigned long)section.Characteristics);
+
+        size_t raw_offset = (size_t)section.PointerToRawData;
+        size_t raw_size = (size_t)section.SizeOfRawData;
+
+        if (raw_size != 0){
+            if (raw_offset > file->size ||
+                raw_size > file->size - raw_offset){
+                fprintf(stderr,"Section %zu raw data outside file\n",i + 1);
+                return EXIT_FAILURE;
+            }
+        }
+    }
 
     return EXIT_SUCCESS;
 }
