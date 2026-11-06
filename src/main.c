@@ -19,7 +19,9 @@ int main(int argc, char *argv[]) {
 
     printf("Size: %zu bytes\n",file.size);
 
+    int result = pe_print_info(&file);
+
     pe_free_file(&file);
 
-    return EXIT_SUCCESS;
+    return result;
 }
